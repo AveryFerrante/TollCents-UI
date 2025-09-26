@@ -1,8 +1,26 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { MissingAccessCodeError } from "../../models/errors";
 import type { RouteInformation } from "../../models/route-information";
-import { fetchRouteInformation } from "../../services/api-service";
 import { accessCodeStorage } from "../../services/local-storage-service";
+
+const fakeData: RouteInformation = {
+  startAddress: "123 Main St, Springfield, IL 62701",
+  endAddress: "456 Elm St, Shelbyville, IL 62565",
+  avoidTollsRouteInformation: {
+    driveTime: { hours: 1, minutes: 30 },
+    distanceInMiles: 100,
+    description: "Avoiding Tolls Route",
+  },
+  tollRouteInformation: {
+    driveTime: { hours: 1, minutes: 15 },
+    distanceInMiles: 90,
+    description: "Toll Route",
+    hasDynamicTolls: true,
+    guaranteedTollPrice: 5.0,
+    estimatedDynamicTollPrice: 10.0,
+    processedAllDynamicTolls: true,
+  },
+};
 
 export const RouteResultsLoader = async ({
   request,
@@ -18,11 +36,11 @@ export const RouteResultsLoader = async ({
   const endAddress = url.searchParams.get("end") || "";
   const hasTollTag = url.searchParams.get("hasTollTag") || "false";
 
-  const data = await fetchRouteInformation(
-    startAddress,
-    endAddress,
-    hasTollTag === "true",
-    accessCode
-  );
-  return data;
+  // const data = await fetchRouteInformation(
+  //   startAddress,
+  //   endAddress,
+  //   hasTollTag === "true",
+  //   accessCode
+  // );
+  return fakeData;
 };
