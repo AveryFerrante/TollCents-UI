@@ -1,10 +1,12 @@
-import { Alert } from "@mui/material";
+import { Alert, Link, Typography } from "@mui/material";
+import { useState } from "react";
 import type {
   BaseRouteInformation,
   RouteInformation,
   TollRouteInformation,
 } from "../../models/route-information";
 import { pluralizeWithCount } from "../../utils/stringFormatters";
+import DynamicTollsLearnMoreDialog from "./dynamic-tolls-learn-more-dialog";
 
 interface RouteInformationSummaryProps {
   routeInfo: RouteInformation;
@@ -64,6 +66,7 @@ const getTollRouteSummaryText = (
 const RouteInformationSummary = ({
   routeInfo,
 }: RouteInformationSummaryProps) => {
+  const [modalOpen, setModalOpen] = useState(false);
   const hasMultipleRoutes = Boolean(routeInfo.tollRouteInformation);
   if (!hasMultipleRoutes) {
     return (
@@ -80,9 +83,26 @@ const RouteInformationSummary = ({
   );
   if (isFaster) {
     return (
-      <Alert severity="info" variant="outlined">
-        {getTollRouteSummaryText(tollRoute, timeDifferenceMinutes)}
-      </Alert>
+      <>
+        <Alert severity="info" variant="outlined">
+          <Typography variant="body2">
+            {getTollRouteSummaryText(tollRoute, timeDifferenceMinutes)}
+            {tollRoute.hasDynamicTolls && (
+              <span>
+                {" "}
+                <Link component="button" onClick={() => setModalOpen(true)}>
+                  Learn more
+                </Link>
+              </span>
+            )}
+          </Typography>
+        </Alert>
+        <DynamicTollsLearnMoreDialog
+          open={modalOpen}
+          processedAllDynamicTolls={tollRoute.processedAllDynamicTolls}
+          onClose={() => setModalOpen(false)}
+        />
+      </>
     );
   } else {
     return (
