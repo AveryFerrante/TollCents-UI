@@ -1,4 +1,4 @@
-import { Alert, Link } from "@mui/material";
+import { Alert, Link, Typography } from "@mui/material";
 import { useState } from "react";
 import type {
   BaseRouteInformation,
@@ -85,23 +85,21 @@ const RouteInformationSummary = ({
     return (
       <>
         <Alert severity="info" variant="outlined">
-          {getTollRouteSummaryText(tollRoute, timeDifferenceMinutes)}
-          {tollRoute.hasDynamicTolls && (
-            <span>
-              {" "}
-              <Link
-                component="button"
-                variant="body2"
-                onClick={() => setModalOpen(true)}
-                pl={1}
-              >
-                Learn more
-              </Link>
-            </span>
-          )}
+          <Typography variant="body2">
+            {getTollRouteSummaryText(tollRoute, timeDifferenceMinutes)}
+            {tollRoute.hasDynamicTolls && (
+              <span>
+                {" "}
+                <Link component="button" onClick={() => setModalOpen(true)}>
+                  Learn more
+                </Link>
+              </span>
+            )}
+          </Typography>
         </Alert>
         <DynamicTollsLearnMoreDialog
           open={modalOpen}
+          processedAllDynamicTolls={tollRoute.processedAllDynamicTolls}
           onClose={() => setModalOpen(false)}
         />
       </>
