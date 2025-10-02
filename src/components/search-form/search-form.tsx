@@ -15,6 +15,7 @@ import { useNavigate } from "react-router";
 import type { PlaceSuggestionResult } from "../../models/place-suggestion-result";
 import {
   accessCodeStorage,
+  hasTollTagStorage,
   PreviousSearchedAddressesStorage,
 } from "../../services/local-storage-service";
 import AccessCodePrompt from "./access-code-prompt";
@@ -31,23 +32,23 @@ const validateInput = (
   return startAddress?.name && endAddress?.name;
 };
 
-// const getPreviouslySearchedAddresses = (
-//   type: "start" | "end"
-// ): PlaceSuggestionResult[] => {
-//   const previousAddresses = PreviousSearchedAddressesStorage.get();
-//   const addresses =
-//     type === "start"
-//       ? previousAddresses?.startAddresses
-//       : previousAddresses?.endAddresses;
-//   if (!previousAddresses || !Array.isArray(addresses)) return [];
-//   return addresses
-//     .slice()
-//     .sort((a, b) => b.count - a.count)
-//     .slice(0, 3)
-//     .map((addr) => {
-//       return { name: addr.address };
-//     });
-// };
+const getPreviouslySearchedAddresses = (
+  type: "start" | "end"
+): PlaceSuggestionResult[] => {
+  const previousAddresses = PreviousSearchedAddressesStorage.get();
+  const addresses =
+    type === "start"
+      ? previousAddresses?.startAddresses
+      : previousAddresses?.endAddresses;
+  if (!previousAddresses || !Array.isArray(addresses)) return [];
+  return addresses
+    .slice()
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+    .map((addr) => {
+      return { name: addr.address };
+    });
+};
 
 const setSearchedAddress = (type: "start" | "end", address: string) => {
   if (!address || address.length === 0) return;
@@ -59,6 +60,7 @@ const setSearchedAddress = (type: "start" | "end", address: string) => {
     type === "start"
       ? previousAddresses.startAddresses
       : previousAddresses.endAddresses;
+  console.log("working list", workingList);
   const existing = workingList.find((a) => a.address === address);
   if (existing) {
     existing.count += 1;
@@ -76,7 +78,9 @@ const SearchForm = () => {
     null
   );
   const [accessCode, setAccessCode] = useState(accessCodeStorage.get() ?? "");
-  const [hasTollTag, setHasTollTag] = useState(false);
+  const [hasTollTag, setHasTollTag] = useState(
+    hasTollTagStorage.get() ?? false
+  );
 
   const handleButtonClick = () => {
     const queryParams = new URLSearchParams({
@@ -132,14 +136,14 @@ const SearchForm = () => {
                 }
                 iconColor="success"
                 accessCode={accessCode}
-                // previousSearches={getPreviouslySearchedAddresses("start")}
+                previousSearches={getPreviouslySearchedAddresses("start")}
               />
               <AutoCompleteAddressInput
                 placeholder="Destination address"
                 onValueSelect={(location) => handleSetLocation("end", location)}
                 iconColor="error"
                 accessCode={accessCode}
-                // previousSearches={getPreviouslySearchedAddresses("end")}
+                previousSearches={getPreviouslySearchedAddresses("end")}
               />
               <FormControlLabel
                 sx={{ width: "fit-content" }}
@@ -157,7 +161,10 @@ const SearchForm = () => {
                   <Checkbox
                     sx={{ p: "0 8px 0 0" }}
                     checked={hasTollTag}
-                    onChange={(e) => setHasTollTag(e.target.checked)}
+                    onChange={(e) => {
+                      setHasTollTag(e.target.checked);
+                      hasTollTagStorage.set(e.target.checked);
+                    }}
                   />
                 }
               />
