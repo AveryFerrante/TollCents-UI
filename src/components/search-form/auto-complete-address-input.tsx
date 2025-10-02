@@ -40,14 +40,12 @@ const AutoCompleteAddressInput = ({
   iconColor,
   accessCode,
   previousSearches,
-}: // previousSearches,
-AutoCompleteInputProps) => {
+}: AutoCompleteInputProps) => {
   const [selectedValue, setSelectedValue] =
     useState<PlaceSuggestionResult | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [options, setOptions] = useState<PlaceSuggestionResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasFetched, setHasFetched] = useState(false);
   const [isTextFieldActive, setIsTextFieldActive] = useState(false);
   const [errorText, setErrorText] = useState("");
 
@@ -55,7 +53,6 @@ AutoCompleteInputProps) => {
     // TODO: clean up?
     if (inputValue === "" || inputValue.length < minimumQueryCharacterCount) {
       setOptions([]);
-      setHasFetched(false);
       return undefined;
     }
 
@@ -76,7 +73,6 @@ AutoCompleteInputProps) => {
       } finally {
         if (active) {
           setIsLoading(false);
-          setHasFetched(true);
         }
       }
     }, 750);
