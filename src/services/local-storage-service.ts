@@ -35,3 +35,5 @@ export const PreviousSearchedAddressesStorage =
   new LocalStorageService<PreviousSearchedAddresses>(
     "previousSearchedAddresses"
   );
+
+export const hasTollTagStorage = new LocalStorageService<boolean>("hasTollTag");

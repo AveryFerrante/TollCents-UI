@@ -1,9 +1,12 @@
+import { Restore } from "@mui/icons-material";
 import RoomIcon from "@mui/icons-material/Room";
 import {
   Autocomplete,
+  Chip,
   CircularProgress,
   Paper,
   TextField,
+  Typography,
   type PaperProps,
   type SvgIconOwnProps,
 } from "@mui/material";
@@ -29,13 +32,14 @@ type AutoCompleteInputProps = {
   onValueSelect: (value: PlaceSuggestionResult | null) => void;
   iconColor: SvgIconOwnProps["color"];
   accessCode: string;
-  // previousSearches: PlaceSuggestionResult[];
+  previousSearches: PlaceSuggestionResult[];
 };
 const AutoCompleteAddressInput = ({
   placeholder,
   onValueSelect,
   iconColor,
   accessCode,
+  previousSearches,
 }: // previousSearches,
 AutoCompleteInputProps) => {
   const [selectedValue, setSelectedValue] =
@@ -44,6 +48,8 @@ AutoCompleteInputProps) => {
   const [options, setOptions] = useState<PlaceSuggestionResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const [isTextFieldActive, setIsTextFieldActive] = useState(false);
+  const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
     // TODO: clean up?
@@ -56,11 +62,22 @@ AutoCompleteInputProps) => {
     let active = true;
     const debounced = setTimeout(async () => {
       setIsLoading(true);
-      const response = await fetchAddressSuggestions(inputValue, accessCode);
-      if (active) {
-        setOptions(response);
-        setIsLoading(false);
-        setHasFetched(true);
+      try {
+        const response = await fetchAddressSuggestions(inputValue, accessCode);
+        if (active) {
+          setOptions(response);
+          setErrorText("");
+        }
+      } catch {
+        if (active) {
+          setErrorText("An unknown error occured");
+          setOptions([]);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+          setHasFetched(true);
+        }
       }
     }, 750);
     return () => {
@@ -69,21 +86,15 @@ AutoCompleteInputProps) => {
     };
   }, [inputValue, accessCode]);
 
-  // TODO: Better handling of showing previous searches vs. API results vs. No results, etc.
-  // If inputValue is empty, show previous searches? This means that "Type at least X characters" won't show.
-  // Check for first interaction - if no interaction, show previous searches?
-  // If interaction but no results, show "No results found"
-  // If interaction and results, show results
-  // If interaction and loading, show loading
-  // hasFetched is always the inverse of isLoading?, except when inputValue is empty [after the comma was AI input]?
+  const inputHasMetMinCountThreshold =
+    inputValue.length >= minimumQueryCharacterCount;
+  const minCharacterHelpText = `Type at least ${minimumQueryCharacterCount} characters`;
+  const showPreviousSearchedOptions = !(
+    options.length > 0 && inputValue.length > 0
+  );
   return (
     <Autocomplete
-      options={
-        // options && options.length > 0 && inputValue.length > 0
-        //   ? options
-        //   : previousSearches
-        options
-      }
+      options={showPreviousSearchedOptions ? previousSearches : options}
       getOptionLabel={(option) => option.name}
       filterOptions={(x) => x}
       autoComplete
@@ -92,29 +103,36 @@ AutoCompleteInputProps) => {
       slots={{
         paper: CustomMenu,
       }}
-      // renderOption={(props, option) => {
-      //   const isPrevious = previousSearches?.some(
-      //     (p) => p.name === option.name
-      //   );
-      //   return (
-      //     <li {...props}>
-      //       {option.name}
-      //       {isPrevious ? (
-      //         <span style={{ marginLeft: 8, fontSize: "0.8em", opacity: 0.8 }}>
-      //           *previous search
-      //         </span>
-      //       ) : null}
-      //     </li>
-      //   );
-      // }}
+      renderOption={(props, option) => {
+        return (
+          <li {...props} key={props.key}>
+            {option.name}
+            {showPreviousSearchedOptions && (
+              <Chip
+                label="past search"
+                size="small"
+                variant="outlined"
+                color="primary"
+                icon={<Restore />}
+                sx={{
+                  ml: 2,
+                }}
+              />
+            )}
+          </li>
+        );
+      }}
       noOptionsText={
-        inputValue.length < minimumQueryCharacterCount
-          ? `Type at least ${minimumQueryCharacterCount} characters`
-          : hasFetched && !isLoading && options.length === 0
-          ? "No results found"
-          : "Loading..."
+        errorText ? (
+          <Typography color="error">{errorText}</Typography>
+        ) : previousSearches.length === 0 && !inputHasMetMinCountThreshold ? (
+          minCharacterHelpText
+        ) : (
+          "No Results Found"
+        )
       }
-      loading={isLoading}
+      loadingText="Loading..."
+      loading={isLoading && inputHasMetMinCountThreshold}
       value={selectedValue}
       onChange={(_, newValue) => {
         onValueSelect(newValue);
@@ -126,14 +144,28 @@ AutoCompleteInputProps) => {
       }}
       renderInput={(params) => (
         <TextField
+          onFocus={() => setIsTextFieldActive(true)}
+          onBlur={() => {
+            setIsTextFieldActive(false);
+            setErrorText("");
+          }}
           {...params}
           fullWidth
-          placeholder={placeholder}
+          placeholder={
+            isTextFieldActive && previousSearches.length > 0
+              ? minCharacterHelpText
+              : placeholder
+          }
           slotProps={{
             input: {
               ...params.InputProps,
               startAdornment: <RoomIcon color={iconColor} sx={{ mr: 2 }} />,
-              endAdornment: isLoading ? <CircularProgress size={20} /> : <></>,
+              endAdornment:
+                isLoading && inputHasMetMinCountThreshold ? (
+                  <CircularProgress size={20} />
+                ) : (
+                  <></>
+                ),
             },
           }}
         />
