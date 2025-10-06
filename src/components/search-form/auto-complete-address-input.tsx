@@ -1,18 +1,23 @@
-import { Restore } from "@mui/icons-material";
+import { Close, MyLocation, Restore } from "@mui/icons-material";
 import RoomIcon from "@mui/icons-material/Room";
 import {
   Autocomplete,
   Chip,
   CircularProgress,
+  IconButton,
   Paper,
   TextField,
   Typography,
   type PaperProps,
   type SvgIconOwnProps,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import useIsMobile from "../../hooks/useIsMobile";
 import type { PlaceSuggestionResult } from "../../models/place-suggestion-result";
-import { fetchAddressSuggestions } from "../../services/api-service";
+import {
+  fetchAddressFromGeolocation,
+  fetchAddressSuggestions,
+} from "../../services/api-service";
 
 const CustomMenu = (props: PaperProps) => {
   return (
@@ -33,6 +38,7 @@ type AutoCompleteInputProps = {
   iconColor: SvgIconOwnProps["color"];
   accessCode: string;
   previousSearches: PlaceSuggestionResult[];
+  canUseCurrentLocation?: boolean;
 };
 const AutoCompleteAddressInput = ({
   placeholder,
@@ -40,6 +46,7 @@ const AutoCompleteAddressInput = ({
   iconColor,
   accessCode,
   previousSearches,
+  canUseCurrentLocation = false,
 }: AutoCompleteInputProps) => {
   const [selectedValue, setSelectedValue] =
     useState<PlaceSuggestionResult | null>(null);
@@ -48,11 +55,62 @@ const AutoCompleteAddressInput = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isTextFieldActive, setIsTextFieldActive] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const isMobile = useIsMobile();
+  const ignoreNextInputValueChange = useRef(false);
 
+  const handleSetInputValue = (inputValue: string) => {
+    if (inputValue.length < minimumQueryCharacterCount) {
+      setIsLoading(false);
+    }
+    setInputValue(inputValue);
+  };
+
+  const handleMyLocationClick = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          console.log(latitude, longitude);
+          setIsLoading(true);
+          const result = await fetchAddressFromGeolocation(
+            latitude,
+            longitude,
+            accessCode
+          );
+          setIsLoading(false);
+          setSelectedValue(result);
+          ignoreNextInputValueChange.current = true;
+          onValueSelect(result);
+        },
+        (error) => {
+          // TODO: Proper error messaging
+          if (error.PERMISSION_DENIED) {
+            alert("Permission to location denied");
+          } else
+            alert(
+              "Location cannot be determined, please fill out the search bar"
+            );
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        }
+      );
+    } else {
+      alert("Geolocation is not supported by the browser");
+    }
+  };
   useEffect(() => {
     // TODO: clean up?
     if (inputValue === "" || inputValue.length < minimumQueryCharacterCount) {
       setOptions([]);
+      return undefined;
+    }
+
+    if (ignoreNextInputValueChange.current) {
+      ignoreNextInputValueChange.current = false;
       return undefined;
     }
 
@@ -90,6 +148,7 @@ const AutoCompleteAddressInput = ({
   );
   return (
     <Autocomplete
+      clearIcon={<Close />}
       options={showPreviousSearchedOptions ? previousSearches : options}
       getOptionLabel={(option) => option.name}
       filterOptions={(x) => x}
@@ -128,15 +187,17 @@ const AutoCompleteAddressInput = ({
         )
       }
       loadingText="Loading..."
-      loading={isLoading && inputHasMetMinCountThreshold}
+      loading={isLoading}
       value={selectedValue}
       onChange={(_, newValue) => {
+        console.log("onChange triggered");
         onValueSelect(newValue);
         setSelectedValue(newValue);
-        setInputValue("");
+        handleSetInputValue("");
       }}
       onInputChange={(_, newInputValue) => {
-        setInputValue(newInputValue);
+        console.log("onInputChange");
+        handleSetInputValue(newInputValue);
       }}
       renderInput={(params) => (
         <TextField
@@ -156,12 +217,18 @@ const AutoCompleteAddressInput = ({
             input: {
               ...params.InputProps,
               startAdornment: <RoomIcon color={iconColor} sx={{ mr: 2 }} />,
-              endAdornment:
-                isLoading && inputHasMetMinCountThreshold ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <></>
-                ),
+              sx: {
+                paddingRight: "1rem !important",
+              },
+              endAdornment: isLoading ? (
+                <CircularProgress size={20} />
+              ) : canUseCurrentLocation && isMobile ? (
+                <IconButton onClick={handleMyLocationClick}>
+                  <MyLocation color="primary" />
+                </IconButton>
+              ) : (
+                <></>
+              ),
             },
           }}
         />

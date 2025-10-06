@@ -60,7 +60,6 @@ const setSearchedAddress = (type: "start" | "end", address: string) => {
     type === "start"
       ? previousAddresses.startAddresses
       : previousAddresses.endAddresses;
-  console.log("working list", workingList);
   const existing = workingList.find((a) => a.address === address);
   if (existing) {
     existing.count += 1;
@@ -137,6 +136,7 @@ const SearchForm = () => {
                 iconColor="success"
                 accessCode={accessCode}
                 previousSearches={getPreviouslySearchedAddresses("start")}
+                canUseCurrentLocation
               />
               <AutoCompleteAddressInput
                 placeholder="Destination address"
