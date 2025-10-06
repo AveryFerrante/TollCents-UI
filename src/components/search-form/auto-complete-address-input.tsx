@@ -67,24 +67,33 @@ const AutoCompleteAddressInput = ({
 
   const handleMyLocationClick = () => {
     if (navigator.geolocation) {
+      setIsLoading(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
-          console.log(latitude, longitude);
-          setIsLoading(true);
-          const result = await fetchAddressFromGeolocation(
-            latitude,
-            longitude,
-            accessCode
-          );
-          setIsLoading(false);
-          setSelectedValue(result);
-          ignoreNextInputValueChange.current = true;
-          onValueSelect(result);
+          try {
+            const result = await fetchAddressFromGeolocation(
+              latitude,
+              longitude,
+              accessCode
+            );
+
+            setSelectedValue(result);
+            ignoreNextInputValueChange.current = true;
+            onValueSelect(result);
+          } catch (error) {
+            // TODO: Proper error messaging
+            alert(
+              "Location cannot be determined, please fill out the search bar"
+            );
+          } finally {
+            setIsLoading(false);
+          }
         },
         (error) => {
           // TODO: Proper error messaging
+          setIsLoading(false);
           if (error.PERMISSION_DENIED) {
             alert("Permission to location denied");
           } else
@@ -94,7 +103,7 @@ const AutoCompleteAddressInput = ({
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,
+          timeout: 7500,
           maximumAge: 0,
         }
       );
