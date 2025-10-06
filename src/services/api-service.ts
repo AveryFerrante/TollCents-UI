@@ -74,6 +74,21 @@ export async function fetchAddressSuggestions(
   );
 }
 
+export async function fetchAddressFromGeolocation(
+  lat: number,
+  long: number,
+  accessCode: string
+) {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: long.toString(),
+  });
+  return get<PlaceSuggestionResult>(
+    `/address-suggestions/geolocation?${params}`,
+    accessCode
+  );
+}
+
 export async function fetchRouteInformation(
   startAddress: string,
   endAddress: string,
